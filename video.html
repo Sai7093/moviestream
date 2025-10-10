@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MovieStream</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* Tailwind gray-900 */
+        }
+        /* Style for the scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937; /* Tailwind gray-800 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563; /* Tailwind gray-600 */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* Tailwind gray-500 */
+        }
+        .item-card, .genre-button, .language-button, #back-button, .content-type-button, #generate-summary-btn, .person-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+        }
+        .item-card:hover, .person-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .genre-button:hover, .language-button:hover, #back-button:hover, .content-type-button:hover, #generate-summary-btn:hover {
+            transform: translateY(-2px);
+            background-color: #be123c; /* A brighter red for hover */
+        }
+         .content-type-button.active {
+            background-color: #be123c;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        #player-wrapper {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            height: 0;
+            overflow: hidden;
+            max-width: 100%;
+            background: #000;
+            border-radius: 0.75rem;
+        }
+        #player-wrapper iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        /* Custom focus style for search */
+        #search-input:focus {
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body class="text-white">
+
+    <!-- Header Section -->
+    <header class="bg-gray-800 shadow-lg sticky top-0 z-50">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex-shrink-0">
+                    <a href="#" onclick="window.location.reload()" class="text-3xl font-bold text-white">MovieStream</a>
+                </div>
+                <!-- Search Bar -->
+                <div class="flex-1 flex justify-center px-2 lg:ml-6 lg:justify-end">
+                    <div class="max-w-lg w-full lg:max-w-xs">
+                         <form id="search-form" class="relative text-gray-400 focus-within:text-gray-600">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <input id="search-input" class="block w-full bg-gray-700 border border-transparent rounded-md py-2 pl-10 pr-3 leading-5 text-gray-300 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-white focus:ring-white focus:text-gray-900 sm:text-sm" placeholder="Search by title or description..." type="search">
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- Back Button -->
+        <div class="mb-6">
+             <button id="back-button" class="bg-red-700 text-white font-semibold py-2 px-4 rounded-full shadow-md items-center gap-2" style="display: none;">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+                Back to list
+            </button>
+        </div>
+
+        <!-- Video Player Section -->
+        <section id="player-container" class="mb-8" style="display: none;">
+            <div id="player-wrapper" class="bg-black rounded-lg overflow-hidden shadow-2xl">
+                 <!-- The Iframe for the video player will go here -->
+            </div>
+        </section>
+        
+        <!-- Details Section -->
+        <section id="details-container" class="mb-12" style="display: none;">
+            <!-- Content details will be dynamically inserted here -->
+        </section>
+
+        <!-- Main View Container -->
+        <div id="main-view">
+            <!-- Content Type Selection -->
+            <section id="content-type-section" class="mb-8">
+                <div id="content-type-buttons" class="flex flex-wrap gap-4">
+                    <button id="movie-btn" class="content-type-button bg-red-700 text-white font-semibold py-2 px-4 rounded-full shadow-md active">Movies</button>
+                    <button id="tv-btn" class="content-type-button bg-red-700 text-white font-semibold py-2 px-4 rounded-full shadow-md">TV Shows</button>
+                </div>
+            </section>
+
+            <!-- Genres Section -->
+            <section id="genres-section" class="mb-12">
+                 <h2 class="text-3xl font-bold mb-6 border-l-4 border-red-500 pl-4">Top Genres</h2>
+                 <div id="genre-buttons" class="flex flex-wrap gap-4">
+                     <!-- Genre buttons will be inserted here -->
+                 </div>
+            </section>
+            
+            <!-- Language Section -->
+            <section id="languages-section" class="mb-12">
+                 <h2 class="text-3xl font-bold mb-6 border-l-4 border-red-500 pl-4">Browse by Language</h2>
+                 <div id="language-buttons" class="flex flex-wrap gap-4">
+                     <!-- Language buttons will be inserted here -->
+                 </div>
+            </section>
+
+            <!-- Grid Section -->
+            <section>
+                <h2 id="grid-title" class="text-3xl font-bold mb-6 border-l-4 border-red-500 pl-4">Popular Movies</h2>
+                <div id="grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                    <!-- Content cards will be dynamically inserted here -->
+                </div>
+                <div id="loading" class="text-center mt-8">
+                    <p class="text-lg">Loading...</p>
+                </div>
+            </section>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-gray-400 mt-12 border-t border-gray-700">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex flex-col sm:flex-row justify-between items-center text-center sm:text-left">
+                <div class="mb-4 sm:mb-0">
+                    <p>&copy; 2025 MovieStream. All Rights Reserved.</p>
+                    <p class="text-xs mt-1">Disclaimer: This site is for educational purposes only.</p>
+                </div>
+                <div class="text-sm">
+                    <p>Created by <span class="font-semibold text-white">Sai Krishna</span> with AI ❤️</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- CONFIGURATION ---
+            const tmdbApiKey = '5df936ea26f87a3db8a1a3b5893c60da';
+            const geminiApiKey = 'AIzaSyxeROlECs6Kl32yetBqjtBp6AzBLbqQEg'; // User-provided Gemini API key
+            const movieGenres = [
+                { id: 28, name: 'Action' }, { id: 12, name: 'Adventure' }, { id: 16, name: 'Animation' }, 
+                { id: 35, name: 'Comedy' }, { id: 80, name: 'Crime' }, { id: 27, name: 'Horror' }, { id: 878, name: 'Sci-Fi' }
+            ];
+            const tvGenres = [
+                { id: 10759, name: 'Action & Adventure' }, { id: 16, name: 'Animation' }, { id: 35, name: 'Comedy' }, 
+                { id: 80, name: 'Crime' }, { id: 18, name: 'Drama' }, { id: 10765, name: 'Sci-Fi & Fantasy' }, { id: 9648, name: 'Mystery' }
+            ];
+            const languages = [
+                { code: 'en', name: 'English' }, { code: 'te', name: 'Telugu' }, { code: 'hi', name: 'Hindi' }
+            ];
+            
+            // --- STATE ---
+            let currentContentType = 'movie'; // 'movie' or 'tv'
+
+            // --- DOM ELEMENTS ---
+            const grid = document.getElementById('grid');
+            const playerWrapper = document.getElementById('player-wrapper');
+            const playerContainer = document.getElementById('player-container');
+            const detailsContainer = document.getElementById('details-container');
+            const loadingIndicator = document.getElementById('loading');
+            const searchForm = document.getElementById('search-form');
+            const searchInput = document.getElementById('search-input');
+            const gridTitle = document.getElementById('grid-title');
+            const genreButtonsContainer = document.getElementById('genre-buttons');
+            const languageButtonsContainer = document.getElementById('language-buttons');
+            const backButton = document.getElementById('back-button');
+            const mainView = document.getElementById('main-view');
+            const movieBtn = document.getElementById('movie-btn');
+            const tvBtn = document.getElementById('tv-btn');
+            const contentTypeButtons = document.getElementById('content-type-buttons');
+
+            // --- FUNCTIONS ---
+            
+            function showMainView() {
+                detailsContainer.style.display = 'none';
+                playerContainer.style.display = 'none';
+                backButton.style.display = 'none';
+                mainView.style.display = 'block';
+            }
+            
+            function showDetailsView() {
+                mainView.style.display = 'none';
+                backButton.style.display = 'inline-flex';
+                detailsContainer.style.display = 'block';
+                window.scrollTo(0, 0);
+            }
+
+            function displayLanguageButtons() {
+                languageButtonsContainer.innerHTML = '';
+                languages.forEach(lang => {
+                    const button = document.createElement('button');
+                    button.className = 'language-button bg-red-700 text-white font-semibold py-2 px-4 rounded-full shadow-md';
+                    button.textContent = lang.name;
+                    button.dataset.langCode = lang.code;
+                    button.dataset.langName = lang.name;
+                    languageButtonsContainer.appendChild(button);
+                });
+            }
+
+            async function fetchAndDisplayContent(url, title) {
+                showMainView();
+                gridTitle.textContent = title;
+                loadingIndicator.style.display = 'block';
+                grid.innerHTML = '';
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+                    const data = await response.json();
+                    displayContentGrid(data.results);
+                     if (data.results.length === 0) {
+                        grid.innerHTML = `<p class="text-gray-400 col-span-full text-center">No results found.</p>`;
+                    }
+                } catch (error) {
+                    console.error("Error fetching content:", error);
+                    grid.innerHTML = `<p class="text-red-500 col-span-full">Failed to load content.</p>`;
+                } finally {
+                    loadingIndicator.style.display = 'none';
+                }
+            }
+            
+            function getPopularContent() {
+                const typeName = currentContentType === 'movie' ? 'Movies' : 'TV Shows';
+                const url = `https://api.themoviedb.org/3/${currentContentType}/popular?api_key=${tmdbApiKey}&language=en-US&page=1`;
+                fetchAndDisplayContent(url, `Popular ${typeName}`);
+            }
+
+            function searchContent(query) {
+                const url = `https://api.themoviedb.org/3/search/${currentContentType}?api_key=${tmdbApiKey}&language=en-US&query=${encodeURIComponent(query)}&page=1&include_adult=false`;
+                fetchAndDisplayContent(url, `Results for "${query}"`);
+            }
+
+            function getContentByGenre(genreId, genreName) {
+                const typeName = currentContentType === 'movie' ? 'Movies' : 'TV Shows';
+                const url = `https://api.themoviedb.org/3/discover/${currentContentType}?api_key=${tmdbApiKey}&with_genres=${genreId}&sort_by=popularity.desc&page=1`;
+                fetchAndDisplayContent(url, `${genreName} ${typeName}`);
+            }
+
+            function getContentByLanguage(langCode, langName) {
+                const typeName = currentContentType === 'movie' ? 'Movies' : 'TV Shows';
+                const url = `https://api.themoviedb.org/3/discover/${currentContentType}?api_key=${tmdbApiKey}&with_original_language=${langCode}&sort_by=popularity.desc&page=1`;
+                fetchAndDisplayContent(url, `Popular ${langName} ${typeName}`);
+            }
+
+            function getContentByPerson(personId, personName) {
+                const typeName = currentContentType === 'movie' ? 'Movies' : 'TV Shows';
+                const url = `https://api.themoviedb.org/3/discover/${currentContentType}?api_key=${tmdbApiKey}&with_cast=${personId}&sort_by=popularity.desc&page=1`;
+                fetchAndDisplayContent(url, `${typeName} starring ${personName}`);
+            }
+
+            function displayContentGrid(items) {
+                grid.innerHTML = '';
+                items.forEach(item => {
+                    if (!item.poster_path) return;
+                    const card = document.createElement('div');
+                    card.className = 'item-card bg-gray-800 rounded-lg overflow-hidden shadow-lg cursor-pointer';
+                    card.dataset.id = item.id;
+                    const posterUrl = `https://image.tmdb.org/t/p/w500${item.poster_path}`;
+                    const title = item.title || item.name;
+                    card.innerHTML = `
+                        <img src="${posterUrl}" alt="${title}" class="w-full h-auto object-cover">
+                        <div class="p-3"><h3 class="font-semibold text-sm truncate text-white">${title}</h3></div>`;
+                    grid.appendChild(card);
+                });
+            }
+
+            async function showContentDetails(id) {
+                showDetailsView();
+                detailsContainer.innerHTML = '<p class="text-center">Loading details...</p>';
+                
+                const detailsUrl = `https://api.themoviedb.org/3/${currentContentType}/${id}?api_key=${tmdbApiKey}&language=en-US`;
+                const creditsUrl = `https://api.themoviedb.org/3/${currentContentType}/${id}/credits?api_key=${tmdbApiKey}&language=en-US`;
+                
+                try {
+                    const [detailsRes, creditsRes] = await Promise.all([fetch(detailsUrl), fetch(creditsUrl)]);
+                    if (!detailsRes.ok || !creditsRes.ok) throw new Error('Failed to fetch details');
+                    
+                    const details = await detailsRes.json();
+                    const credits = await creditsRes.json();
+                    
+                    displayContentDetails({ details, credits });
+                    
+                    if (currentContentType === 'movie') {
+                        playMovie(id);
+                    }
+                } catch (error) {
+                    console.error("Error fetching details:", error);
+                    detailsContainer.innerHTML = `<p class="text-red-500 text-center">Could not find details.</p>`;
+                }
+            }
+
+            function displayContentDetails(data) {
+                const { details, credits } = data;
+                const posterUrl = details.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : 'https://placehold.co/500x750/1f2937/ffffff?text=No+Image';
+                const title = details.title || details.name;
+                const releaseDate = details.release_date || details.first_air_date;
+                const releaseYear = releaseDate ? new Date(releaseDate).getFullYear() : 'N/A';
+                const runtime = details.runtime || (details.episode_run_time ? details.episode_run_time[0] : null);
+                const genres = details.genres.map(g => g.name).join(', ');
+
+                const placeholderPerson = 'https://placehold.co/200x300/1f2937/ffffff?text=No+Image';
+                const castHtml = credits.cast.slice(0, 16).map(person => `
+                    <div class="person-card text-center cursor-pointer" data-person-id="${person.id}" data-person-name="${person.name}">
+                        <img src="${person.profile_path ? `https://image.tmdb.org/t/p/w200${person.profile_path}` : placeholderPerson}" alt="${person.name}" class="rounded-lg mb-2 w-full object-cover aspect-[2/3]"/>
+                        <p class="text-sm font-semibold">${person.name}</p>
+                        <p class="text-xs text-gray-400">${person.character}</p>
+                    </div>`).join('');
+                
+                const seasonsHtml = currentContentType === 'tv' ? `
+                    <div id="seasons-container" class="mt-8">
+                        <h3 class="text-2xl font-bold mb-4 border-l-4 border-red-500 pl-4">Seasons</h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                            ${details.seasons.map(season => `
+                                <div class="item-card season-card bg-gray-800 rounded-lg overflow-hidden shadow-lg cursor-pointer" data-series-id="${details.id}" data-season-number="${season.season_number}">
+                                    <img src="${season.poster_path ? `https://image.tmdb.org/t/p/w500${season.poster_path}` : 'https://placehold.co/500x750/1f2937/ffffff?text=No+Image'}" alt="${season.name}" class="w-full h-auto object-cover"/>
+                                    <div class="p-3"><h3 class="font-semibold text-sm truncate text-white">${season.name}</h3></div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>` : '';
+
+                detailsContainer.innerHTML = `
+                    <div class="flex flex-col md:flex-row gap-8">
+                        <div class="flex-shrink-0 w-full md:w-1/4"><img src="${posterUrl}" class="rounded-lg shadow-lg w-full"></div>
+                        <div class="flex-grow">
+                            <h2 class="text-4xl font-bold mb-2">${title} (${releaseYear})</h2>
+                            <div class="flex items-center flex-wrap gap-x-4 gap-y-2 mb-4 text-gray-400">
+                                <span>${releaseDate || ''}</span>
+                                ${genres ? `<span>&bull;</span><span>${genres}</span>` : ''}
+                                ${runtime ? `<span>&bull;</span><span>${runtime} min</span>` : ''}
+                            </div>
+                            <p class="mb-6 text-gray-300">${details.overview || 'No overview available.'}</p>
+                            <div id="ai-summary-container" class="mt-6">
+                                <button id="generate-summary-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-full shadow-md">
+                                    ✨ Generate AI Summary
+                                </button>
+                                <div id="ai-summary-content" class="mt-4 p-4 bg-gray-700 rounded-lg" style="display: none;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="episodes-container" class="mt-8"></div>
+                    ${seasonsHtml}
+                    ${castHtml ? `<div class="mt-8"><h3 class="text-2xl font-bold mb-4 border-l-4 border-red-500 pl-4">Cast</h3><div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6">${castHtml}</div></div>` : ''}`;
+            }
+
+            async function getSeasonEpisodes(seriesId, seasonNumber) {
+                const episodesContainer = document.getElementById('episodes-container');
+                episodesContainer.innerHTML = `<p class="text-center">Loading episodes...</p>`;
+                const url = `https://api.themoviedb.org/3/tv/${seriesId}/season/${seasonNumber}?api_key=${tmdbApiKey}&language=en-US`;
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('Failed to fetch season details');
+                    const data = await response.json();
+                    displayEpisodes(data.episodes, seriesId);
+                } catch (error) {
+                    console.error('Error fetching season episodes:', error);
+                    episodesContainer.innerHTML = `<p class="text-red-500 text-center">Could not load episodes.</p>`;
+                }
+            }
+
+            function displayEpisodes(episodes, seriesId) {
+                const episodesContainer = document.getElementById('episodes-container');
+                const seasonsContainer = document.getElementById('seasons-container');
+                if (seasonsContainer) seasonsContainer.style.display = 'none';
+
+                episodesContainer.innerHTML = `
+                    <h3 class="text-2xl font-bold mb-4 border-l-4 border-red-500 pl-4">Episodes</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        ${episodes.map(episode => `
+                            <div class="item-card episode-card bg-gray-800 rounded-lg overflow-hidden shadow-lg cursor-pointer" data-series-id="${seriesId}" data-season-number="${episode.season_number}" data-episode-number="${episode.episode_number}">
+                                <img src="${episode.still_path ? `https://image.tmdb.org/t/p/w500${episode.still_path}`: 'https://placehold.co/500x281/1f2937/ffffff?text=No+Image'}" alt="${episode.name}" class="w-full h-auto object-cover"/>
+                                <div class="p-3">
+                                    <h4 class="font-semibold text-sm text-white">E${episode.episode_number}: ${episode.name}</h4>
+                                    <p class="text-xs text-gray-400 mt-1 truncate">${episode.overview || 'No overview available.'}</p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>`;
+            }
+
+            function playMovie(tmdbId) {
+                if (!tmdbId) {
+                    console.warn('TMDB ID missing, cannot play movie.');
+                    playerContainer.style.display = 'none';
+                    return;
+                }
+                playerWrapper.innerHTML = `<iframe src="https://vidsrc.xyz/embed/movie?tmdb=${tmdbId}" allowfullscreen="true" frameborder="0"></iframe>`;
+                playerContainer.style.display = 'block';
+                playerContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            function playEpisode(seriesId, season, episode) {
+                playerWrapper.innerHTML = `<iframe src="https://vidsrc.xyz/embed/tv?tmdb=${seriesId}&season=${season}&episode=${episode}" allowfullscreen="true" frameborder="0"></iframe>`;
+                playerContainer.style.display = 'block';
+                playerContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            
+            function displayGenreButtons() {
+                genreButtonsContainer.innerHTML = '';
+                const genres = currentContentType === 'movie' ? movieGenres : tvGenres;
+                genres.forEach(genre => {
+                    const button = document.createElement('button');
+                    button.className = 'genre-button bg-red-700 text-white font-semibold py-2 px-4 rounded-full shadow-md';
+                    button.textContent = genre.name;
+                    button.dataset.genreId = genre.id;
+                    button.dataset.genreName = genre.name;
+                    genreButtonsContainer.appendChild(button);
+                });
+            }
+
+            // --- AI FUNCTIONS (GEMINI) ---
+
+            async function callGeminiApi(prompt) {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${geminiApiKey}`;
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                };
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error("Gemini API Error:", errorData);
+                        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    return result.candidates?.[0]?.content?.parts?.[0]?.text;
+                } catch (error) {
+                    console.error("Failed to call Gemini API:", error);
+                    throw error;
+                }
+            }
+
+            async function handleAiSearch(query) {
+                showMainView();
+                loadingIndicator.style.display = 'block';
+                grid.innerHTML = '';
+                gridTitle.textContent = `🤖 Asking AI for: "${query}"`;
+
+                try {
+                    const prompt = `Based on the following user request, provide a concise search query (a movie/TV show title or keywords) that is suitable for searching the TMDB database. Respond with ONLY the search query and nothing else. Request: "${query}"`;
+                    const searchQuery = await callGeminiApi(prompt);
+                    
+                    if (searchQuery) {
+                        searchContent(searchQuery.trim());
+                    } else {
+                        throw new Error("AI did not return a valid search query.");
+                    }
+                } catch (error) {
+                    gridTitle.textContent = 'AI Search Failed';
+                    grid.innerHTML = `<p class="text-red-500 col-span-full text-center">The AI search assistant is currently unavailable. Please try a direct title search.</p>`;
+                    loadingIndicator.style.display = 'none';
+                }
+            }
+            
+            async function getAiSummary(title, overview) {
+                const summaryContent = document.getElementById('ai-summary-content');
+                const generateBtn = document.getElementById('generate-summary-btn');
+
+                summaryContent.style.display = 'block';
+                summaryContent.innerHTML = '<p class="text-center text-gray-300">🤖 Generating summary...</p>';
+                generateBtn.textContent = 'Thinking...';
+                generateBtn.disabled = true;
+
+                try {
+                    const prompt = `Write an exciting and engaging summary for the following title, making people want to watch it. Keep it to one or two paragraphs. Title: "${title}". Official Overview: "${overview}"`;
+                    const summary = await callGeminiApi(prompt);
+                    
+                    if (summary) {
+                        const formattedSummary = summary
+                            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                            .replace(/\n/g, '<br>');
+                        summaryContent.innerHTML = `<p>${formattedSummary}</p>`;
+                        generateBtn.style.display = 'none';
+                    } else {
+                        throw new Error("AI did not return a valid summary.");
+                    }
+                } catch (error) {
+                    summaryContent.innerHTML = `<p class="text-red-500 text-center">Failed to generate summary. Please try again later.</p>`;
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = '✨ Generate AI Summary';
+                }
+            }
+
+
+            // --- EVENT LISTENERS ---
+            backButton.addEventListener('click', showMainView);
+
+            contentTypeButtons.addEventListener('click', (e) => {
+                if (e.target.matches('.content-type-button')) {
+                    currentContentType = e.target.id === 'movie-btn' ? 'movie' : 'tv';
+                    movieBtn.classList.toggle('active', currentContentType === 'movie');
+                    tvBtn.classList.toggle('active', currentContentType === 'tv');
+                    displayGenreButtons();
+                    getPopularContent();
+                }
+            });
+            
+            genreButtonsContainer.addEventListener('click', (e) => {
+                const button = e.target.closest('.genre-button');
+                if (button) {
+                    getContentByGenre(button.dataset.genreId, button.dataset.genreName);
+                }
+            });
+
+            languageButtonsContainer.addEventListener('click', (e) => {
+                const button = e.target.closest('.language-button');
+                if (button) {
+                    getContentByLanguage(button.dataset.langCode, button.dataset.langName);
+                }
+            });
+            
+            grid.addEventListener('click', (e) => {
+                const card = e.target.closest('.item-card');
+                if (card) {
+                    showContentDetails(card.dataset.id);
+                }
+            });
+
+            detailsContainer.addEventListener('click', (e) => {
+                const seasonCard = e.target.closest('.season-card');
+                const episodeCard = e.target.closest('.episode-card');
+                const personCard = e.target.closest('.person-card');
+
+                if (seasonCard) {
+                    const { seriesId, seasonNumber } = seasonCard.dataset;
+                    getSeasonEpisodes(seriesId, seasonNumber);
+                } else if (episodeCard) {
+                    const { seriesId, seasonNumber, episodeNumber } = episodeCard.dataset;
+                    playEpisode(seriesId, seasonNumber, episodeNumber);
+                } else if (personCard) {
+                    const { personId, personName } = personCard.dataset;
+                    getContentByPerson(personId, personName);
+                } else if (e.target.id === 'generate-summary-btn') {
+                    const titleElement = detailsContainer.querySelector('h2');
+                    const overviewElement = detailsContainer.querySelector('p');
+                    if(titleElement && overviewElement) {
+                         const title = titleElement.textContent;
+                         const overview = overviewElement.textContent;
+                         getAiSummary(title, overview);
+                    }
+                }
+            });
+
+            searchForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const searchTerm = searchInput.value.trim();
+                if (searchTerm) {
+                    // Use AI for descriptive queries (2+ words), and direct search for single-word titles.
+                    if (searchTerm.split(' ').length > 1) {
+                         handleAiSearch(searchTerm);
+                    } else {
+                         searchContent(searchTerm);
+                    }
+                }
+            });
+
+            searchInput.addEventListener('input', () => {
+                if (searchInput.value.trim() === '') getPopularContent();
+            });
+
+            // --- INITIALIZATION ---
+            function init() {
+                displayLanguageButtons();
+                displayGenreButtons();
+                getPopularContent();
+            }
+
+            init();
+        });
+    </script>
+</body>
+</html>
+
